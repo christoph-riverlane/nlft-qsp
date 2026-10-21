@@ -1,0 +1,36 @@
+# .github/workflows/sync-upstream.yml
+#
+# Keeps christoph-riverlane/nlft-qsp in sync with LorenzoLaneve/nlft-qsp.
+# Uses GitHub's "merge upstream" API (same as the "Sync fork" button):
+# fast-forwards when possible, otherwise creates a merge commit, and fails
+# loudly (HTTP 409) if there is a conflict that needs manual resolution.
+ 
+name: Sync fork with upstream
+ 
+on:
+  schedule:
+    - cron: "0 6 * * *"   # every day at 06:00 UTC
+  workflow_dispatch:       # allow manual runs from the Actions tab
+ 
+permissions:
+  contents: write
+ 
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+ 
+jobs:
+  sync:
+    # Only run in the fork, never in the upstream repo if this file gets PR'd back
+    if: github.repository == 'christoph-riverlane/nlft-qsp'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync main from LorenzoLaneve/nlft-qsp
+        env:
+          # A PAT is needed if upstream changes files under .github/workflows,
+          # because GITHUB_TOKEN is not allowed to modify workflow files.
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh repo sync "${{ github.repository }}" \
+            --source LorenzoLaneve/nlft-qsp \
+            --branch main
